@@ -26,6 +26,23 @@ const SITUATION_SUGGESTIONS = [
   'Online dating profiles vs reality',
 ];
 
+const FAVORITES_KEY = 'aimakeslaugh_favorites';
+
+function loadFavorites() {
+  try {
+    const raw = localStorage.getItem(FAVORITES_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveFavorites(list) {
+  localStorage.setItem(FAVORITES_KEY, JSON.stringify(list));
+}
+
 export default function App() {
   const [apiKey, setApiKey] = useState('');
   const [apiKeySet, setApiKeySet] = useState(false);
@@ -37,7 +54,9 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [copied, setCopied] = useState(false);
+  const [copiedId, setCopiedId] = useState(null);
   const [jokeHistory, setJokeHistory] = useState([]);
+  const [favorites, setFavorites] = useState(() => loadFavorites());
 
   const handleSetApiKey = () => {
     if (apiKey.trim().startsWith('gsk_')) {
@@ -83,12 +102,47 @@ export default function App() {
   const handleCopy = () => {
     navigator.clipboard.writeText(joke);
     setCopied(true);
+    setCopiedId(null);
     setTimeout(() => setCopied(false), 2000);
   };
 
   const handleSuggestion = (s) => {
     setSituation(s);
     setError('');
+  };
+
+  const currentJokeLabel = joke
+    ? mode === 'comedian'
+      ? `${COMEDIANS.find((c) => c.name === selectedComedian)?.emoji} ${selectedComedian}${topic ? ` · ${topic}` : ''}`
+      : situation.slice(0, 60) + (situation.length > 60 ? '…' : '')
+    : '';
+
+  const isCurrentFavorited = joke && favorites.some((f) => f.text === joke);
+
+  const toggleFavorite = () => {
+    if (!joke) return;
+    if (isCurrentFavorited) {
+      const next = favorites.filter((f) => f.text !== joke);
+      setFavorites(next);
+      saveFavorites(next);
+    } else {
+      const entry = { id: Date.now(), text: joke, label: currentJokeLabel };
+      const next = [entry, ...favorites];
+      setFavorites(next);
+      saveFavorites(next);
+    }
+  };
+
+  const removeFavorite = (id) => {
+    const next = favorites.filter((f) => f.id !== id);
+    setFavorites(next);
+    saveFavorites(next);
+  };
+
+  const copyFavorite = (id, text) => {
+    navigator.clipboard.writeText(text);
+    setCopiedId(id);
+    setTimeout(() => setCopiedId(null), 2000);
   };
 
   if (!apiKeySet) {
@@ -242,12 +296,50 @@ export default function App() {
             </div>
             <p className="joke-text">{joke}</p>
             <div className="joke-actions">
+              <button
+                className={`btn-action btn-favorite ${isCurrentFavorited ? 'is-favorited' : ''}`}
+                onClick={toggleFavorite}
+                title={isCurrentFavorited ? 'Remove from saved' : 'Save joke'}
+              >
+                {isCurrentFavorited ? '❤️ Saved' : '🤍 Save'}
+              </button>
               <button className="btn-action" onClick={handleCopy}>
                 {copied ? '✅ Copied!' : '📋 Copy'}
               </button>
               <button className="btn-action" onClick={handleGenerate} disabled={loading}>
                 🔄 Another one
               </button>
+            </div>
+          </div>
+        )}
+
+        {favorites.length > 0 && (
+          <div className="favorites-section">
+            <h3 className="favorites-title">
+              <span className="favorites-icon">❤️</span> Saved ({favorites.length})
+            </h3>
+            <div className="favorites-list">
+              {favorites.map((f) => (
+                <div key={f.id} className="favorite-item">
+                  <span className="favorite-label">{f.label}</span>
+                  <p className="favorite-text">{f.text}</p>
+                  <div className="favorite-actions">
+                    <button
+                      className="btn-action btn-action-small"
+                      onClick={() => copyFavorite(f.id, f.text)}
+                    >
+                      {copiedId === f.id ? '✅ Copied!' : '📋 Copy'}
+                    </button>
+                    <button
+                      className="btn-action btn-action-small btn-remove"
+                      onClick={() => removeFavorite(f.id)}
+                      title="Remove from saved"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         )}
