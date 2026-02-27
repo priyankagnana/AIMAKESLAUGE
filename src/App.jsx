@@ -26,6 +26,10 @@ const SITUATION_SUGGESTIONS = [
   'Online dating profiles vs reality',
 ];
 
+const SURPRISE_TOPICS = [
+  'airports', 'dating', 'social media', 'work', 'family', 'pets', 'technology', 'food', 'exercise', 'sleep',
+];
+
 const FAVORITES_KEY = 'aimakeslaugh_favorites';
 
 function loadFavorites() {
@@ -67,29 +71,36 @@ export default function App() {
     }
   };
 
-  const handleGenerate = useCallback(async () => {
-    if (mode === 'comedian' && !selectedComedian) {
+  const handleGenerate = useCallback(async (override = {}) => {
+    const comedian = override.comedian ?? selectedComedian;
+    const topicVal = override.topic !== undefined ? override.topic : topic;
+    const situationVal = override.situation !== undefined ? override.situation : situation;
+
+    if (mode === 'comedian' && !comedian) {
       setError('Pick a comedian first!');
       return;
     }
-    if (mode === 'situation' && !situation.trim()) {
+    if (mode === 'situation' && !situationVal.trim()) {
       setError('Describe a situation first!');
       return;
     }
     setError('');
     setLoading(true);
     setJoke('');
+    if (override.comedian !== undefined) setSelectedComedian(override.comedian);
+    if (override.topic !== undefined) setTopic(override.topic);
+    if (override.situation !== undefined) setSituation(override.situation);
     try {
       const result = await generateJoke({
         mode,
-        comedian: selectedComedian,
-        topic: topic.trim(),
-        situation: situation.trim(),
+        comedian,
+        topic: topicVal.trim(),
+        situation: situationVal.trim(),
         apiKey,
       });
       setJoke(result);
       setJokeHistory((prev) => [
-        { text: result, mode, comedian: selectedComedian, situation, topic, id: Date.now() },
+        { text: result, mode, comedian, situation: situationVal, topic: topicVal, id: Date.now() },
         ...prev.slice(0, 9),
       ]);
     } catch (err) {
@@ -98,6 +109,20 @@ export default function App() {
       setLoading(false);
     }
   }, [mode, selectedComedian, topic, situation, apiKey]);
+
+  const handleSurpriseMe = () => {
+    if (mode === 'comedian') {
+      const c = COMEDIANS[Math.floor(Math.random() * COMEDIANS.length)];
+      const useTopic = Math.random() > 0.5;
+      handleGenerate({
+        comedian: c.name,
+        topic: useTopic ? SURPRISE_TOPICS[Math.floor(Math.random() * SURPRISE_TOPICS.length)] : '',
+      });
+    } else {
+      const s = SITUATION_SUGGESTIONS[Math.floor(Math.random() * SITUATION_SUGGESTIONS.length)];
+      handleGenerate({ situation: s });
+    }
+  };
 
   const handleCopy = () => {
     navigator.clipboard.writeText(joke);
@@ -272,19 +297,30 @@ export default function App() {
 
           {error && <p className="error-msg">{error}</p>}
 
-          <button
-            className="btn-generate"
-            onClick={handleGenerate}
-            disabled={loading}
-          >
-            {loading ? (
-              <span className="loading-text">
-                <span className="spinner" /> Writing the joke...
-              </span>
-            ) : (
-              '⚡ Generate Joke'
-            )}
-          </button>
+          <div className="generate-row">
+            <button
+              type="button"
+              className="btn-surprise"
+              onClick={handleSurpriseMe}
+              disabled={loading}
+              title={mode === 'comedian' ? 'Random comedian + topic' : 'Random situation'}
+            >
+              🎲 Surprise me
+            </button>
+            <button
+              className="btn-generate"
+              onClick={() => handleGenerate()}
+              disabled={loading}
+            >
+              {loading ? (
+                <span className="loading-text">
+                  <span className="spinner" /> Writing the joke...
+                </span>
+              ) : (
+                '⚡ Generate Joke'
+              )}
+            </button>
+          </div>
         </div>
 
         {joke && (

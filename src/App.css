@@ -352,7 +352,38 @@
   color: #ccc;
 }
 
+.generate-row {
+  display: flex;
+  gap: 0.75rem;
+  align-items: stretch;
+}
+
+.btn-surprise {
+  padding: 1rem 1.25rem;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 14px;
+  color: #ccc;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.btn-surprise:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(247, 201, 72, 0.4);
+  color: #f7c948;
+}
+
+.btn-surprise:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .btn-generate {
+  flex: 1;
   width: 100%;
   padding: 1rem;
   background: linear-gradient(135deg, #f7c948 0%, #ff6b35 100%);
